@@ -22,6 +22,10 @@ virtual Basic* matchPcopy() { return new CLASS_NAME INIT_LIST; }\
 virtual void clear() { _clear(); }
 
 #define WCHAR_PTR_MOVE ptr = const_cast<wchar_t*>(sptr);
+
+		ERROR_CLASS_DEF(match_error, "match error");
+
+
 		class Basic {
 		protected:
 			wchar_t* ptr;//指向字符串（没有所有权）
@@ -38,7 +42,6 @@ virtual void clear() { _clear(); }
 			Basic(bool greedy = false) :ptr(nullptr), size(0), greedy(greedy) {}
 			Basic(const Basic& obj) :ptr(obj.ptr), size(obj.size) {}
 
-			ERROR_CLASS_DEF(match_error, "match error");
 
 			virtual void match(const wchar_t* sptr) = 0;
 			virtual void rematch() = 0;

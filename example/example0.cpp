@@ -12,7 +12,7 @@ int main()
 	str.match(wstr);//The box will try to match from start
 	
 	wchar_t* result = str.moveStrResult();//get the result with ownership
-	std::wcout << result << std::endl;
+	std::wcout << result << std::endl;//print "hello"
 	delete[] result;//remember to delete it
 	
 	result = str.getPtr();//get the start position of the box in original C wstring
@@ -23,7 +23,7 @@ int main()
 	wchar_t* end = result + str.getSize();
 	for(; result < end; result++) {
 		std::wcout << *result;
-	}
-	std::wcout << endl;
+	}//print "hello"
+	std::wcout << std::endl;
 	return 0;
 }
