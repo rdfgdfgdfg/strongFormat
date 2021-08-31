@@ -40,7 +40,7 @@ virtual void clear() { _clear(); }
 			}
 		public:
 			Basic(bool greedy = false) :ptr(nullptr), size(0), greedy(greedy) {}
-			Basic(const Basic& obj) :ptr(obj.ptr), size(obj.size) {}
+			Basic(const Basic& obj) :ptr(obj.ptr), size(obj.size), greedy(obj.greedy) {}
 
 
 			virtual void match(const wchar_t* sptr) = 0;
@@ -68,21 +68,12 @@ virtual void clear() { _clear(); }
 			string wstr;
 			inline void _clear() { Basic::_clear(); }
 		public:
-			String(string wstr) :wstr(wstr) {
-#ifdef TUT_FORMAT_STRING_LAYOUT
-				printf("String::%p 构造\n", this);
-#endif
-			}
-			String(const String& obj) :Basic(obj), wstr(obj.wstr) {
-#ifdef TUT_FORMAT_STRING_LAYOUT
-				printf("String::%p 构造\n", this);
-#endif
-			}
-			virtual ~String() {
-#ifdef TUT_FORMAT_STRING_LAYOUT
-				printf("String::%p 析构\n", this);
-#endif
-			}
+			String() {}
+			String(string wstr) :wstr(wstr) {}
+			String(const String& obj) :Basic(obj), wstr(obj.wstr) {}
+
+			void set(string str) { wstr = str; }
+			virtual ~String() {}
 			virtual void match(const wchar_t* sptr);
 			virtual void rematch();
 			VIRTUAL_TEMPLATE_COPY(String, (wstr));
@@ -90,7 +81,22 @@ virtual void clear() { _clear(); }
 
 		using resVector = vector<Basic*>;
 
-		
+		class StringOr : public Basic {
+		protected:
+			string wstr;
+			inline void _clear() { Basic::_clear(); }
+		public:
+			StringOr() {}
+			StringOr(string wstr) :wstr(wstr) {}
+			StringOr(const StringOr& obj) :Basic(obj), wstr(obj.wstr) {}
+
+			void set(string str) { wstr = str; }
+			virtual ~StringOr() {}
+			virtual void match(const wchar_t* sptr);
+			virtual void rematch();
+			VIRTUAL_TEMPLATE_COPY(StringOr, (wstr));
+		};
+
 
 		class Or : public Basic {//匹配任意一个值
 		protected:
@@ -100,9 +106,13 @@ virtual void clear() { _clear(); }
 
 			void _clear();
 		public:
+			Or(): cpdPtr(nullptr) {}
 			Or(resVector templated):templated(templated), cpdPtr(nullptr) {}
 			Or(const Or& obj): Basic(obj), templated(obj.templated), 
 				cpdPtr(cpdPtr), cpdIt(cpdIt) {}
+			void setTemplated(resVector newTemplated) { templated = newTemplated; }
+			resVector getTemplated() { return templated; }
+
 			virtual void match(const wchar_t* sptr);
 			virtual void rematch();
 			virtual ~Or();
@@ -167,10 +177,9 @@ virtual void clear() { _clear(); }
 				resVector vec;
 			public:
 				Queue* super;
-				bool safety;
 
 				Next(Queue* super, resVector&& _vec) :
-					super(super), safety(safety)
+					super(super)
 				{
 					if (_vec.empty()) {
 						throw match_error();
@@ -193,8 +202,12 @@ virtual void clear() { _clear(); }
 		protected:
 			resVector templated;//模板（不占有指针）
 		public:
+			Vector() {}
 			Vector(resVector templated) :templated(templated) {}
 			Vector(const Vector& obj) : Queue(obj), templated(obj.templated) {}
+			void setTemplated(resVector newTemplated) { templated = newTemplated; }
+			resVector getTemplated() { return templated; }
+
 			inline void _clear(){ Queue::_clear(); }
 			virtual ~Vector() { _clear(); }
 			virtual void match(const wchar_t* sptr);
@@ -209,8 +222,10 @@ virtual void clear() { _clear(); }
 		protected:
 
 			Basic* repeated;//不所有该指针
+			Repeat(bool greedy = false) : repeated(nullptr), Queue(greedy) {}
 			Repeat(Basic* repeated, bool greedy = false) :repeated(repeated), Queue(greedy){}
 			Repeat(const Repeat& obj) : Queue(obj), repeated(obj.repeated) {}
+
 
 			void push_back_repeated_ptr() { 
 				push_back_templated_ptr_and_match(repeated->matchPcopy());
@@ -224,17 +239,9 @@ virtual void clear() { _clear(); }
 				_clear();
 			}
 
-			class MatchAcc {
-			public:
-				Repeat* super;
-				resVector::reverse_iterator it;//指向最后一个元素
-				Basic* iptr;//最后一个盒指针
-				wchar_t* chenptr;//字符串指针，指向匹配体的尾指针
-				size_t sizeAcc;//size累加器
-
-				MatchAcc(Repeat* super, wchar_t* chptr);
-				~MatchAcc() {}
-			};
+		public:
+			Basic* getRepeated() { return repeated; }
+			void setRepeated(Basic* newRepeated) { repeated = newRepeated; }
 		};
 
 
@@ -272,6 +279,19 @@ virtual void clear() { _clear(); }
 		};
 
 		//-------------------------------------------------------------------------
+
+		void StringOr::match(const wchar_t* sptr) {
+			for (auto i : wstr) {
+				if (i == *sptr) {
+					ptr = const_cast<wchar_t*>(sptr);
+					size = 1;
+					return;
+				}
+			}
+			throw match_error();
+		}
+
+		void StringOr::rematch() { throw match_error(); }
 
 		void Or::match(const wchar_t* sptr) {
 			ptr = const_cast<wchar_t*>(sptr);
@@ -441,47 +461,6 @@ virtual void clear() { _clear(); }
 			delete rematchPtr;
 		}
 
-		/*void Repeat::next(resVector::reverse_iterator rit) {
-			while (rit != result.rend()) {//倒着迭代，一直rematch，失败就继续，继续不了就报错
-				try {
-					(*rit)->rematch();
-
-					//如果执行到这里还没有报错跳出，说明rematch成功
-					wchar_t* start = (*rit)->getEnd();
-					for (resVector::iterator i = rit.base(); i != result.end(); i++) {
-						//从rematch的后一个元素开始匹配，变更sptr
-						try {
-							(*i)->clear();
-							(*i)->match(start);
-						}
-						catch (match_error) {
-							next(static_cast<resVector::reverse_iterator>(i));
-						}
-
-						start = (*i)->getEnd();
-					}
-
-				}
-				catch (match_error) {
-					rit++;
-				}
-			}
-			throw match_error();
-		}*/
-
-
-		Repeat::MatchAcc::MatchAcc(Repeat* super, wchar_t* chptr) :
-			super(super)
-		{
-
-				iptr = super->repeated->matchPcopy();
-				super->result.push_back(iptr);
-				it = super->result.rbegin();
-				super->tryMatch(iptr, it, chptr);
-				sizeAcc = iptr->getSize();
-				chenptr = iptr->getEnd();
-			
-		}
 
 		void Queue::tryMatch(Basic* iptr, resVector::reverse_iterator it, wchar_t* chptr) {
 			while (true) {

@@ -6,6 +6,7 @@ cmake_minimum_required (VERSION 3.8)
 project ("example0")
 project ("example1")
 project ("example2")
+project ("example3")
 
 include_directories (../include)
 
@@ -13,5 +14,6 @@ include_directories (../include)
 add_executable (example0 "example0.cpp" "example.h")
 add_executable (example1 "example1.cpp" "example.h")
 add_executable (example2 "example2.cpp" "example.h")
+add_executable (example3 "example3.cpp" "example.h")
 
 # TODO: 如有需要，请添加测试并安装目标。
