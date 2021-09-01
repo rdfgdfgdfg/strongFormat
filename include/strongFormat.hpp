@@ -91,6 +91,7 @@ virtual void clear() { _clear(); }
 			StringOr(const StringOr& obj) :Basic(obj), wstr(obj.wstr) {}
 
 			void set(string str) { wstr = str; }
+			string get() { return wstr; }
 			virtual ~StringOr() {}
 			virtual void match(const wchar_t* sptr);
 			virtual void rematch();
@@ -109,7 +110,7 @@ virtual void clear() { _clear(); }
 			Or(): cpdPtr(nullptr) {}
 			Or(resVector templated):templated(templated), cpdPtr(nullptr) {}
 			Or(const Or& obj): Basic(obj), templated(obj.templated), 
-				cpdPtr(cpdPtr), cpdIt(cpdIt) {}
+				cpdPtr(cpdPtr), cpdIt(templated.begin() + (obj.cpdIt - obj.templated.begin())) {}
 			void setTemplated(resVector newTemplated) { templated = newTemplated; }
 			resVector getTemplated() { return templated; }
 
@@ -123,7 +124,7 @@ virtual void clear() { _clear(); }
 				cpdPtr = nullptr;
 				return rt;
 			}
-			inline Basic* getMatchedOrgTemp() {}//获得match成功的ptr的源ptr（所有权本来在外部）
+			inline Basic* getMatchedOrgTemp() { return *cpdIt; }//获得match成功的ptr的源ptr（所有权本来在外部）
 
 			VIRTUAL_TEMPLATE_COPY(Or, (templated));
 		};
@@ -227,7 +228,7 @@ virtual void clear() { _clear(); }
 			Repeat(const Repeat& obj) : Queue(obj), repeated(obj.repeated) {}
 
 
-			void push_back_repeated_ptr() { 
+			inline void push_back_repeated_ptr() { 
 				push_back_templated_ptr_and_match(repeated->matchPcopy());
 			}
 			inline void _clear(){
@@ -306,6 +307,7 @@ virtual void clear() { _clear(); }
 					delete cpdPtr;
 				}
 			}
+			cpdPtr = nullptr;
 			throw match_error();
 		}
 
@@ -317,6 +319,7 @@ virtual void clear() { _clear(); }
 		}
 
 		void Or::rematch() {
+			cpdIt++;
 			for (; cpdIt != templated.end(); cpdIt++) {
 				try {
 					cpdPtr = (*cpdIt)->matchPcopy();
@@ -326,8 +329,10 @@ virtual void clear() { _clear(); }
 				}
 				catch (match_error) {
 					delete cpdPtr;
+
 				}
 			}
+			cpdPtr = nullptr;
 			throw match_error();
 		}
 
@@ -482,11 +487,13 @@ virtual void clear() { _clear(); }
 			wchar_t* chptr = const_cast<wchar_t*>(sptr);
 			ptr = chptr;
 			size = 0;
-			for (size_t i = 0; i < min; i++) {
+			size_t i = 0;
+			while (i < min) {
 				push_back_repeated_ptr();
+				i++;
 			}
 			if (greedy) {
-				for (size_t i = min; i < max; i++) {
+				for (; i < max; i++) {
 					try {
 						push_back_repeated_ptr();
 					}
