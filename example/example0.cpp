@@ -11,11 +11,9 @@ int main()
 	const wchar_t* wstr = L"hello!!!!!!!!!!!!!!!!";//The matched C wstring
 	str.match(wstr);//The box will try to match from start
 	
-	wchar_t* result = str.moveStrResult();//get the result with ownership
-	std::wcout << result << std::endl;//print "hello"
-	delete[] result;//remember to delete it
+	std::wcout << str.moveStrResult() << std::endl;//print "hello"
 	
-	result = str.getPtr();//get the start position of the box in original C wstring
+	wchar_t* result = str.getPtr();//get the start position of the box in original C wstring
 	//because of this, it can't add a '\0' to the end
 	//so, don't use wcout or wprintf to print the result
 	//the right way is to use a ergodic

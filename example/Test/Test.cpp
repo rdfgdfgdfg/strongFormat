@@ -5,6 +5,15 @@
 #include <vector>
 #include <string>
 
+
+#ifdef TUT_FORMAT_DEBUG
+#include <iostream>
+#define TUT_LOG(A) std::printf A
+#else
+#define TUT_LOG(A)  
+#endif
+
+
 #define ERROR_CLASS_DEF(NAME, MESSAGE) \
 class NAME : public std::runtime_error{\
 	public:NAME() : std::runtime_error(MESSAGE) {};\
@@ -14,6 +23,7 @@ class NAME : public std::runtime_error{\
 void FUNCTION(TYPE a){this-> OBJ = a;}
 #define CLASS_GET(FUNCTION, OBJ) \
 auto FUNCTION(){return this-> OBJ;}
+
 
 namespace TUT {
 	namespace format {
@@ -128,7 +138,7 @@ virtual void clear() { _clear(); }
 				ptr = obj.ptr;
 				ptr->refNum++;
 			}
-			void operator=(Ptr&& obj) {
+			void operator=(Ptr&& obj) noexcept {
 				this->~Ptr();
 				ptr = obj.ptr;
 				obj.ptr = nullptr;
@@ -311,6 +321,9 @@ virtual void clear() { _clear(); }
 				void getRematchPtr();
 
 				void getMatchPtr();
+
+				void pushIterator();
+				void popIterator();
 
 				resVector::reverse_iterator rit;
 				resVector::iterator it;
@@ -626,12 +639,17 @@ virtual void clear() { _clear(); }
 		}
 
 		wchar_t* Queue::Next::get(resVector& outPut) {
-			outPut.swap(vec);
+			auto i = vec.begin();
+			auto i_ = outPut.begin();
+			while (i != vec.end()) {
+				*i_ = *i;
+				i++;
+				i_++;
+			}
 			return start;
 		}
 
-		Queue::Next::~Next() {
-		}
+		Queue::Next::~Next() {}
 
 		void Queue::Next::getMatchPtr() {
 			*it = (*it).matchPcopy();
@@ -645,37 +663,43 @@ virtual void clear() { _clear(); }
 
 
 		void Queue::Next::matchUntilEnd() {
+			TUT_LOG(("Queue::Next::matchUntilEnd->start\n"));
 			for (it = rit.base(); it != matchEnd; it++) {
 				//从rematch的后一个元素开始匹配，变更sptr
 				getMatchPtr();
 				while (true) {
 					try {
 						matchPtr.match(start);
+						TUT_LOG(("Queue::Next::matchUntilEnd->match sucess\n"));
 						break;
 					}
 					catch (match_error) {
+						TUT_LOG(("Queue::Next::matchUntilEnd->match error\n"));
 						try {
 							matchPtr.clear();
 							recursiveNext();
 						}
 						catch (match_error e) {
 							//delete matchPtr;
+							TUT_LOG(("Queue::Next::matchUntilEnd->fetal error\n"));
 							throw e;
 						}
 					}
 				}
 
 
-				start = (*it).getEnd();
+				start = matchPtr.getEnd();
 			}
+			TUT_LOG(("Queue::Next::matchUntilEnd->end\n"));
 		}
 
 		void Queue::Next::recursiveNext() {
-
+			TUT_LOG(("Queue::Next::recursiveNext->start\n"));
 			Next next(vec, resVector::reverse_iterator(it));
 			next.main();
-			start = next.get(vec);
 
+			start = next.get(vec);
+			TUT_LOG(("Queue::Next::recursiveNext->end\n"));
 		}
 
 		void Queue::Next::whileTryRematch() {
@@ -815,7 +839,7 @@ int main() {
 	StringExcept secpt(L",，");
 	RepeatRange rrg_(&secpt, 0, -1, false);
 	Separate sep(&rrg_, &vec, 0, -1, true);
-	sep.match(L"kf,  a  , aac");
+	sep.match(L"k , a , 9");
 	//sep.match(L"aac,7");
 	//sep.rematch();
 	resVector resV = sep.getResult();

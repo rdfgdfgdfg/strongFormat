@@ -1,5 +1,4 @@
-#include <iostream>
-#include <strongFormat.hpp>
+#include "example.h"
 
 using namespace TUT::format;
 
