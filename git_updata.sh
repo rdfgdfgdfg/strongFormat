@@ -1,5 +1,5 @@
-git rm -r --cached .
-git add *
+git rm -r -f --cached .
+git add .
 echo 有如下更改
 git status
 echo 发布说明?
