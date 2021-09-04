@@ -5,6 +5,6 @@ git status
 echo 发布说明?
 read commitMsg
 git commit -m "$commitMsg"
-git push origin main
+git push origin main -f
 echo 完成，按任意键退出
 read
