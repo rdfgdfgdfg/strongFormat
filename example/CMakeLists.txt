@@ -9,6 +9,7 @@ project ("example2")
 project ("example3")
 project ("example4")
 project ("example5")
+project ("example6")
 
 include_directories (../include)
 
@@ -19,5 +20,6 @@ add_executable (example2 "example2.cpp" "example.h")
 add_executable (example3 "example3.cpp" "example.h")
 add_executable (example4 "example4.cpp" "example.h")
 add_executable (example5 "example5.cpp" "example.h")
+add_executable (example6 "example6.cpp" "example.h")
 
 # TODO: 如有需要，请添加测试并安装目标。
