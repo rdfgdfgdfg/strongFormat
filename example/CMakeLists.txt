@@ -3,6 +3,7 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+
 project ("example0")
 project ("example1")
 project ("example2")

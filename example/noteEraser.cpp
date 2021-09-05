@@ -43,11 +43,13 @@ int main(int argv, char**argc) {
 	ss << iFile.rdbuf();
 	wstring_convert< codecvt_utf8<wchar_t>> wcv;
 	wstring wstr = wcv.from_bytes(ss.str());
-	message.match(wstr.data());
+	message.matchFull(wstr.data());
 	resVector result = message.get<Separate*>()->getResult();
-	for (auto i = result.begin(); i != result.end(); i++++) {
-		oFile << wcv.to_bytes((*i).moveStrResult());
+	for (auto i = 0; i < result.size(); i+=2) {
+		std::wcout << result[i].moveStrResult() << endl;
+		oFile << wcv.to_bytes(result[i].moveStrResult());
 	}
+
 	iFile.close();
 	oFile.close();
 }

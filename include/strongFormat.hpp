@@ -71,9 +71,15 @@ virtual void clear() { _clear(); }
 			virtual Basic* matchPcopy()  const = 0;//拷贝，但是只拷贝可以match的部分
 			virtual void clear() = 0;//回到派生类刚构造后的状态
 
-		public:
 			string moveStrResult() const {
 				return string(ptr, size);
+			}
+
+			void matchFull(const wchar_t* sptr) {
+				match(sptr);
+				while (*getEnd() != '\0') {
+					rematch();
+				}
 			}
 
 			inline size_t getSize() const noexcept { return size; }
@@ -106,6 +112,7 @@ virtual void clear() { _clear(); }
 
 			void match(const wchar_t* sptr) { ptr->match(sptr); };
 			void rematch() { ptr->rematch(); };
+			void matchFull(const wchar_t* sptr) { ptr->matchFull(sptr); }
 			Ptr copy() const { return Ptr(ptr->copy()); };
 			Ptr matchPcopy() const { return Ptr(ptr->matchPcopy()); };
 			void clear() { ptr->clear(); };
@@ -270,6 +277,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 
 
 			void push_back_templated_ptr_and_match(Ptr ptr);
+			void pop_back();
 
 			class Next {
 				wchar_t* start;
@@ -430,11 +438,9 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 			}
 			catch (match_error) {
 				if (greedy) {
-					size -= result.back().getSize();
-					result.pop_back();
+					pop_back();
 					if (size != 0) {
-						size -= result.back().getSize();
-						result.pop_back();
+						pop_back();
 					}
 				}
 				else {
@@ -445,7 +451,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 						push_back_templated_ptr_and_match(templated.matchPcopy());
 					}
 					catch (match_error) {
-						result.pop_back();
+						pop_back();
 						throw match_error();
 					}
 				}
@@ -471,7 +477,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 							push_back_templated_ptr_and_match(split.matchPcopy());
 						}
 						catch (match_error) {
-							result.pop_back();
+							pop_back();
 							break;
 						}
 					}
@@ -481,10 +487,10 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 					}
 					catch (match_error) {
 						if (i != 0) {
-							result.pop_back();
+							pop_back();
 						}
 
-						result.pop_back();
+						pop_back();
 						break;
 					}
 				}
@@ -565,6 +571,9 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 				throw match_error();
 			}
 			while (true) {
+				if (*chptr == '\0') {
+					throw match_error();
+				}
 				if (chptr < chfailmin) { chfailmin = chptr; }
 				if (chptr > chfailmax) { chfailmax = chptr; }
 				try {
@@ -583,6 +592,11 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 			}
 			size = obj.getEnd() - ptr;
 			workSpace.swap(result);
+		}
+
+		void Queue::pop_back() {
+			result.pop_back();
+			size = result.back().getEnd() - ptr;
 		}
 
 		void Vector::match(const wchar_t* sptr) {
@@ -701,7 +715,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 						push_back_repeated_ptr();
 					}
 					catch (match_error) {
-						result.pop_back();
+						pop_back();
 						break;
 					}
 				}
@@ -718,8 +732,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 			}
 			catch (match_error) {
 				if (greedy) {
-					size -= result.back().getSize();
-					result.pop_back();
+					pop_back();
 				}
 				else {
 					try {
@@ -727,7 +740,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 
 					}
 					catch (match_error) {
-						result.pop_back();
+						pop_back();
 						throw match_error();
 					}
 				}
