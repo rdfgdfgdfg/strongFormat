@@ -10,6 +10,7 @@ project ("example3")
 project ("example4")
 project ("example5")
 project ("example6")
+project ("noteEraser")
 
 include_directories (../include)
 
@@ -21,5 +22,6 @@ add_executable (example3 "example3.cpp" "example.h")
 add_executable (example4 "example4.cpp" "example.h")
 add_executable (example5 "example5.cpp" "example.h")
 add_executable (example6 "example6.cpp" "example.h")
+add_executable (noteEraser "noteEraser.cpp" "example.h")
 
 # TODO: 如有需要，请添加测试并安装目标。
