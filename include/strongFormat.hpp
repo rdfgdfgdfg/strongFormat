@@ -19,9 +19,9 @@ class NAME : public std::runtime_error{\
 };
 
 #define CLASS_SET(FUNCTION, OBJ, TYPE) \
-void FUNCTION(TYPE a){this-> OBJ = a;}
+inline void FUNCTION(TYPE a){this-> OBJ = a;}
 #define CLASS_GET(FUNCTION, OBJ) \
-auto FUNCTION() const {return this-> OBJ;}
+inline auto FUNCTION() const noexcept {return this-> OBJ;}
 
 
 namespace TUT {
@@ -54,11 +54,6 @@ virtual void clear() { _clear(); }
 			bool greedy;
 
 			inline void _clear() { ptr = nullptr; size = 0; }
-			inline Basic* _rematchPcopy(Basic* obj) const {//为matchPcopy的对象添加rematch信息
-				obj->ptr = ptr;
-				obj->size = size;
-				return obj;
-			}
 		public:
 			Basic(bool greedy = false) :ptr(nullptr), size(0), greedy(greedy), refNum(1){}
 			Basic(const Basic& obj) :ptr(obj.ptr), size(obj.size), greedy(obj.greedy), refNum(1) {}
@@ -71,7 +66,7 @@ virtual void clear() { _clear(); }
 			virtual Basic* matchPcopy()  const = 0;//拷贝，但是只拷贝可以match的部分
 			virtual void clear() = 0;//回到派生类刚构造后的状态
 
-			string moveStrResult() const {
+			inline string moveStrResult() const {
 				return string(ptr, size);
 			}
 
@@ -81,10 +76,13 @@ virtual void clear() { _clear(); }
 					rematch();
 				}
 			}
+			CLASS_GET(getSize, size);
+			CLASS_GET(getPtr, ptr);
+			CLASS_GET(getGreedy, greedy);
+			CLASS_SET(setGreedy, greedy, bool);
 
-			inline size_t getSize() const noexcept { return size; }
-			inline wchar_t* getPtr()  const noexcept { return ptr; }
 			inline wchar_t* getEnd()  const noexcept { return ptr + size; }
+
 		};
 
 		class Ptr {
@@ -92,13 +90,13 @@ virtual void clear() { _clear(); }
 			friend Ptr makePtr(Args ... args);
 		protected:
 			Basic* ptr;
-			Ptr(Basic* _ptr) :ptr(_ptr) {}
+			inline Ptr(Basic* _ptr) :ptr(_ptr) {}
 		public:
-			Ptr() :ptr(nullptr) {}
-			Ptr(const Ptr& obj) :ptr(obj.ptr) {
+			inline Ptr() :ptr(nullptr) {}
+			inline Ptr(const Ptr& obj) :ptr(obj.ptr) {
 				ptr->refNum++;
 			}
-			Ptr(Ptr&& obj) noexcept :ptr(obj.ptr) {
+			inline Ptr(Ptr&& obj) noexcept :ptr(obj.ptr) {
 				obj.ptr = nullptr;
 			}
 			~Ptr() {
@@ -108,16 +106,17 @@ virtual void clear() { _clear(); }
 					delete ptr;
 				}
 			}
-			template<class T> T get() const { return dynamic_cast<T>(ptr); }
+			inline template<class T> T get() const { return dynamic_cast<T>(ptr); }
+			inline Basic* get() const { return ptr; }
 
-			void match(const wchar_t* sptr) { ptr->match(sptr); };
-			void rematch() { ptr->rematch(); };
-			void matchFull(const wchar_t* sptr) { ptr->matchFull(sptr); }
-			Ptr copy() const { return Ptr(ptr->copy()); };
-			Ptr matchPcopy() const { return Ptr(ptr->matchPcopy()); };
-			void clear() { ptr->clear(); };
+			inline void match(const wchar_t* sptr) { ptr->match(sptr); };
+			inline void rematch() { ptr->rematch(); };
+			inline void matchFull(const wchar_t* sptr) { ptr->matchFull(sptr); }
+			inline Ptr copy() const { return Ptr(ptr->copy()); };
+			inline Ptr matchPcopy() const { return Ptr(ptr->matchPcopy()); };
+			inline void clear() { ptr->clear(); };
 
-			string moveStrResult() const {
+			inline string moveStrResult() const {
 				return ptr->moveStrResult();
 			}
 
@@ -125,26 +124,26 @@ virtual void clear() { _clear(); }
 			inline wchar_t* getPtr() const { return ptr->getPtr(); }
 			inline wchar_t* getEnd() const { return ptr->getEnd(); }
 
-			bool operator==(const Ptr obj) const {
+			inline bool operator==(const Ptr obj) const {
 				return obj.ptr == ptr;
 			}
-			bool operator!=(const Ptr obj) const {
+			inline bool operator!=(const Ptr obj) const {
 				return ! (obj == *this);
 			}
-			void operator=(nullptr_t) {
+			inline void operator=(nullptr_t) {
 				this->~Ptr();
 				ptr = nullptr;
 			}
-			void operator=(Basic*ptr) {
+			inline void operator=(Basic*ptr) {
 				this->~Ptr();
 				this->ptr = ptr;
 			}
-			void operator=(const Ptr& obj) {
+			inline void operator=(const Ptr& obj) {
 				this->~Ptr();
 				ptr = obj.ptr;
 				ptr->refNum++;
 			}
-			void operator=(Ptr&& obj) noexcept {
+			inline void operator=(Ptr&& obj) noexcept {
 				this->~Ptr();
 				ptr = obj.ptr;
 				obj.ptr = nullptr;
@@ -152,14 +151,14 @@ virtual void clear() { _clear(); }
 		};
 
 		template<class T, class ... Args>
-		Ptr makePtr(Args ... args) {
+		inline Ptr makePtr(Args ... args) {
 			Basic* ptr = new T(args...);
 			return Ptr(ptr);
 		}
 
 #define POLYMORPHIC_PTR_MAKE(FUNCTION_NAME, CLASS_NAME) \
 template<class ... Args_>\
-Ptr FUNCTION_NAME (Args_ ... args_){\
+inline Ptr FUNCTION_NAME (Args_ ... args_){\
 	return makePtr<CLASS_NAME, Args_...>(args_...);\
 }
 
@@ -177,8 +176,8 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 			string wstr;
 			inline void _clear() { Basic::_clear(); }
 		public:
-			String() {}
-			String(string wstr) :wstr(wstr) {}
+			inline String() {}
+			inline String(string wstr) :wstr(wstr) {}
 			String(const String& obj) :Basic(obj), wstr(obj.wstr) {}
 
 			CLASS_SET(set, wstr, string);
@@ -197,8 +196,8 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 			string wstr;
 			inline void _clear() { Basic::_clear(); }
 		public:
-			StringOr() {}
-			StringOr(string wstr) :wstr(wstr) {}
+			inline StringOr() {}
+			inline StringOr(string wstr) :wstr(wstr) {}
 			StringOr(const StringOr& obj) :Basic(obj), wstr(obj.wstr) {}
 
 			CLASS_SET(set, wstr, string);
@@ -214,8 +213,8 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 			string wstr;
 			inline void _clear() { Basic::_clear(); }
 		public:
-			StringExcept() {}
-			StringExcept(string wstr) :wstr(wstr) {}
+			inline StringExcept() {}
+			inline StringExcept(string wstr) :wstr(wstr) {}
 			StringExcept(const StringExcept& obj) :Basic(obj), wstr(obj.wstr) {}
 			CLASS_SET(set, wstr, string);
 			CLASS_GET(get, wstr);
@@ -234,10 +233,10 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 			Ptr cpdPtr;//成功匹配的指针
 			resVector::iterator cpdIt;//成功匹配的指针的模板（在templated中）(当然，也无所有权）
 
-			void _clear();
+			inline void _clear();
 		public:
-			Or() {}
-			Or(resVector templated) :templated(templated) {}
+			inline Or() {}
+			inline Or(resVector templated) :templated(templated) {}
 			Or(const Or& obj) : Basic(obj), templated(obj.templated),
 				cpdPtr(cpdPtr), cpdIt(templated.begin() + (obj.cpdIt - obj.templated.begin())) {}
 
@@ -258,7 +257,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 		protected:
 
 			resVector result;
-			Queue(bool greedy = false) : Basic(greedy) {}
+			inline Queue(bool greedy = false) : Basic(greedy) {}
 			Queue(const Queue& obj) :Basic(obj) {
 				result.reserve(obj.result.size());
 				for (auto i : obj.result) {
@@ -288,12 +287,9 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 
 				void recursiveNext();
 
-				void getRematchPtr();
+				inline void getRematchPtr();
 
-				void getMatchPtr();
-
-				void pushIterator();
-				void popIterator();
+				inline void getMatchPtr();
 
 				resVector::reverse_iterator rit;
 				resVector::iterator it;
@@ -311,7 +307,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 						throw match_error();
 					}
 				}
-				void main();
+				inline void main();
 				wchar_t* get(resVector& output);//不包括it
 				~Next();
 			};
@@ -340,7 +336,7 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 
 			VIRTUAL_TEMPLATE_DEF(Vector, (templated));
 		};
-
+		
 		class Separate : public Queue {
 		protected:
 			Ptr templated;//不占有
@@ -364,6 +360,13 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 
 			CLASS_SET(setTemplated, templated, Ptr);
 			CLASS_GET(getTemplated, templated);
+			CLASS_SET(setSplit, split, Ptr);
+			CLASS_GET(getSplit, split);
+			CLASS_SET(setMax, max, size_t);
+			CLASS_GET(getMax, max);
+			CLASS_SET(setMin, min, size_t);
+			CLASS_GET(getMin, min);
+
 			VIRTUAL_TEMPLATE_DEF(Separate, (templated, split, min, max, greedy));
 		};
 
@@ -403,12 +406,15 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 				Repeat::_clear();
 			}
 		public:
+			RepeatConstTimes() :times(0) {}
 			RepeatConstTimes(Ptr repeated, size_t times) :Repeat(repeated), times(times) {}
 			RepeatConstTimes(const RepeatConstTimes& obj) :Repeat(obj), times(obj.times) {}
 			virtual void match(const wchar_t* sptr);
 			virtual void rematch();
 			virtual ~RepeatConstTimes() {}
 			VIRTUAL_TEMPLATE_DEF(RepeatConstTimes, (repeated, times));
+			CLASS_SET(setTimes, times, size_t);
+			CLASS_GET(getTimes, times);
 		};
 
 		class RepeatRange : public Repeat {
@@ -419,12 +425,17 @@ Ptr FUNCTION_NAME (Args_ ... args_){\
 				Repeat::_clear();
 			}
 		public:
+
 			RepeatRange(Ptr repeated, size_t min, size_t max, bool greedy = false) :
 				Repeat(repeated, greedy), min(min), max(max) {}
 			RepeatRange(const RepeatRange& obj) :Repeat(obj), min(obj.min), max(obj.max) {}
 			virtual void match(const wchar_t* sptr);
 			virtual void rematch();
 			virtual ~RepeatRange() {}
+			CLASS_SET(setMax, max, size_t);
+			CLASS_GET(getMax, max);
+			CLASS_SET(setMin, min, size_t);
+			CLASS_GET(getMin, min);
 			VIRTUAL_TEMPLATE_DEF(RepeatRange, (repeated, min, max, greedy));
 		};
 
