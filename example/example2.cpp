@@ -1,6 +1,6 @@
 #include "example.h"
 
-using namespace TUT::format;
+using namespace TUT::re;
 
 int main() {
 	String str(L"hello");
@@ -32,7 +32,7 @@ int main() {
 	std::printf("The size of vec1 is %llu\n", vec1.size());
 
 	rrg0.rematch();//method rematch() is used to match again to get another result, but the start doesn't change
-	rrg1.rematch();//if rematch failed, it will throw TUT::format::match_error too
+	rrg1.rematch();//if rematch failed, it will throw TUT::re::match_error too
 
 	resVector vec0_ = rrg0.getResult();
 	resVector vec1_ = rrg1.getResult();

@@ -1,6 +1,5 @@
 #include "example.h"
 
-using namespace TUT::format;
 
 Ptr comment = Vector_makePtr(resVector({ 
 	String_makePtr(L"/*"), 

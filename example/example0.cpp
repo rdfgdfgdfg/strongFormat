@@ -3,7 +3,7 @@
 
 #include "example.h"
 
-using namespace TUT::format;
+
 
 int main()
 {

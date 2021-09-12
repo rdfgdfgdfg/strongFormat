@@ -5,7 +5,7 @@
 #include <string>
 
 
-#ifdef TUT_FORMAT_DEBUG
+#ifdef TUT_RE_DEBUG
 #include <iostream>
 #define TUT_LOG(A) std::printf A
 #else
@@ -25,7 +25,7 @@ inline auto FUNCTION() const noexcept {return this-> OBJ;}
 
 
 namespace TUT {
-	namespace format {
+	namespace re {
 		using string = std::wstring;
 		using size_t = std::size_t;
 
@@ -265,6 +265,7 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 				else {\
 					if(size < max){\
 						_match();\
+						size++;\
 					}\
 					else{\
 						throw match_error();\

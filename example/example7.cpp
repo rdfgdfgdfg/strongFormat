@@ -1,12 +1,12 @@
 #include "example.h"
 
-#include <strongFormatParsing.hpp>
+#include <strongRegularExpressionParsing.hpp>
 
-using namespace TUT::format::expres;
-using namespace TUT::format;
+using namespace TUT::re::expres;
+using namespace TUT::re;
 int main() {
 	_init();
 	Ptr temp = object.matchPcopy();
-	temp.matchFull(L"\"aa\\naaaa\"");
+	temp.matchFull(L"[\"aaa\\nss\" ,  \"3dc\"]");
 
 }

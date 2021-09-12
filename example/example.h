@@ -4,5 +4,7 @@
 #pragma once
 
 #include <iostream>
-#include <strongFormat.hpp>
+#include <strongRegularExpression.hpp>
 // TODO: 在此处引用程序需要的其他标头。
+
+using namespace TUT::re;

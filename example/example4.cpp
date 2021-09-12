@@ -1,6 +1,5 @@
 #include "example.h"
 
-using namespace TUT::format;
 
 int main() {
 	Ptr str = String_makePtr(L"--");

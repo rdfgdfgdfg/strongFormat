@@ -1,10 +1,14 @@
 #pragma once
 
-#include <strongFormat.hpp>
+#include <strongRegularExpression.hpp>
+#include <map>
 
 namespace TUT {
-	namespace format {
+	namespace re {
 		namespace expres {
+			using map = std::map<string, Ptr>;
+			map callMap;//@”≥…‰±Ì
+
 			Ptr expressionName = StringExceptRepeat_makePtr(L"\n :£∫", 1, -1);
 			Ptr empty = StringOrRepeat_makePtr(L" \n\t", 0, -1);
 			Ptr StringObj = Or_makePtr();//"..." / `path`
@@ -12,7 +16,8 @@ namespace TUT {
 			Ptr StringExceptObj = Vector_makePtr();//exc"..." / exc`path`
 			Ptr RepeatRangeObj = Vector_makePtr();// (min, max) * obj
 			Ptr OrObj = Vector_makePtr();//< ... >
-			Ptr CallObj = Vector_makePtr();//@ClassName{...}
+			Ptr VectorObj = Vector_makePtr();//[...]
+			//Ptr CallObj = Vector_makePtr();//@ClassName{...}
 
 			Ptr object = Or_makePtr(resVector({
 				StringObj,
@@ -20,7 +25,7 @@ namespace TUT {
 				StringExceptObj,
 				RepeatRangeObj,
 				OrObj,
-				CallObj
+				VectorObj
 			}));
 
 			Ptr all = Vector_makePtr(resVector({
@@ -47,7 +52,9 @@ namespace TUT {
 				Ptr numbers = StringOr_makePtr(L"0123456789");
 				Ptr numbersTu = Vector_makePtr(resVector({ StringOr_makePtr(L"(£®"), empty, numbers, empty, StringOr_makePtr(L"£¨,"),empty, numbers,empty,String_makePtr(L")£©") }));
 				RepeatRangeObj.get<Vector*>()->setTemplated(resVector({ numbersTu, empty, String_makePtr(L"*"), empty, object}));
-				OrObj.get<Vector*>()->setTemplated(resVector({ String_makePtr(L"<"),Separate_makePtr(object, empty, 1, -1),String_makePtr(L">")}));
+				Ptr comma = Vector_makePtr(resVector({ empty, StringOr_makePtr(L",£¨"), empty }));
+				OrObj.get<Vector*>()->setTemplated(resVector({ String_makePtr(L"<"),Separate_makePtr(object, comma, 1, -1),String_makePtr(L">")}));
+				VectorObj.get<Vector*>()->setTemplated(resVector({ String_makePtr(L"["),Separate_makePtr(object, comma, 1, -1),String_makePtr(L"]") }));
 
 			}
 

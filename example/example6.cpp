@@ -1,8 +1,7 @@
 #include "example.h"
 
-using namespace TUT::format;
 
-//you can inherit the TUT::format::Basic
+//you can inherit the TUT::re::Basic
 class A : public Basic {
 	//this class is equals to RepeatRange(StringOr(...), , )
 protected:
@@ -19,7 +18,7 @@ protected:
 		}
 	}
 public:
-	A(bool greedy = false):min(0), max(0), Basic(greedy) {}//No args constructor
+	A(bool greedy = false, bool banRematch = false):min(0), max(0), Basic(greedy, banRematch) {}//No args constructor
 	A(string wstr, size_t min, size_t max, bool greedy = false) :wstr(wstr), min(min), max(max), Basic(greedy) {}
 	//defined all constructor
 	A(const A&obj):A(obj.wstr, obj.min, obj.max, obj.greedy) {}//copy constructor
@@ -52,6 +51,7 @@ public:
 
 		//you should try to change this->size in this function
 		//otherwise, this function will cause bug or make programme slowwer
+		BAN_REMATCH_CHECK;//the erase this line
 		if (greedy) {
 			if (size > min) {
 				size--;

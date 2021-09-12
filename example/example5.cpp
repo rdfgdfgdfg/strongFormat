@@ -1,6 +1,5 @@
 #include "example.h"
 
-using namespace TUT::format;
 
 int main() {
 	Ptr spe = String_makePtr(L" ");

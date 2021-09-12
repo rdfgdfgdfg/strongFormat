@@ -1,6 +1,5 @@
 #include "example.h"
 
-using namespace TUT::format;
 
 //this is a wrong example
 int main() {
@@ -9,6 +8,6 @@ int main() {
 		str.match(L"Ahhhhhhhhhhhhhhh!!!!!!!!!!!!!hello");
 	}
 	catch (match_error) {//if the box failed to match, it will throw a match_error
-		std::wcout << L"remember : TUT::format-box won't search the C wstring\n";
+		std::wcout << L"remember : TUT::re-box won't search the C wstring\n";
 	}
 }

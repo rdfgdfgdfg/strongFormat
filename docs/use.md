@@ -1,5 +1,5 @@
 # use
-everything is in namespace TUT::format  
+everything is in namespace TUT::re  
 
 |box name|inheritance path|use|template
 |---|---|---|---
@@ -15,7 +15,7 @@ everything is in namespace TUT::format
 # `Basic`
 |function|use
 |---|---
-|`Basic(bool greedy = false)`|if greedy is true, the box will match as much as possible
+|`Basic(bool greedy = false, bool banRematch = false)`|if greedy is true, the box will match as much as possible.If banRematch is true, the box won't try to rematch
 |`virtual void match(const wchar_t\*)`|matching, set the start
 |`virtual void rematch()`|match again to get another result, but don't change the start(seed to match first)
 |`virtual void matchFull(const wchar_t\*)`|similar to `Basic::match`, but it will match until end
@@ -92,3 +92,11 @@ It has every method that Basic has, but `get` is special
 |---|---|---|---
 |`max`|`getMax`|`setMax`|the max repeating times of `templated`
 |`min`|`getMin`|`setMin`|the min repeating times of `templated`
+-----
+
+# `StringOrRepeat`, `StringExceptRepeat`
+|variable that can be visited|get|set|meaning
+|---|---|---|---
+|`wstr`|`get`|`set`|the string
+|`max`|`getMax`|`setMax`|the max size
+|`min`|`getMin`|`setMin`|the min size
