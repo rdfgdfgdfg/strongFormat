@@ -42,7 +42,7 @@ virtual void clear() { _clear(); }
 
 		ERROR_CLASS_DEF(match_error, "match error");
 
-		
+#define BAN_REMATCH_CHECK if(banRematch) { throw match_error(); }
 
 		class Basic {
 			friend class Ptr;
@@ -52,11 +52,15 @@ virtual void clear() { _clear(); }
 			size_t size;
 			size_t refNum;//引用次数
 			bool greedy;
+			bool banRematch;
 
 			inline void _clear() { ptr = nullptr; size = 0; }
 		public:
-			Basic(bool greedy = false) :ptr(nullptr), size(0), greedy(greedy), refNum(1){}
-			Basic(const Basic& obj) :ptr(obj.ptr), size(obj.size), greedy(obj.greedy), refNum(1) {}
+			Basic(bool greedy = false, bool banRematch = false) :
+				ptr(nullptr), size(0), greedy(greedy), banRematch(banRematch), refNum(1){}
+
+			Basic(const Basic& obj) :
+				ptr(obj.ptr), size(obj.size), greedy(obj.greedy), banRematch(obj.banRematch), refNum(1) {}
 
 
 			virtual void match(const wchar_t* sptr) = 0;
@@ -80,10 +84,13 @@ virtual void clear() { _clear(); }
 			CLASS_GET(getPtr, ptr);
 			CLASS_GET(getGreedy, greedy);
 			CLASS_SET(setGreedy, greedy, bool);
+			CLASS_GET(getBanRematch, banRematch);
+			CLASS_SET(setBanRematch, banRematch, bool);
 
 			inline wchar_t* getEnd()  const noexcept { return ptr + size; }
 
 		};
+
 
 		class Ptr {
 			template<class T, class ... Args>
@@ -93,8 +100,11 @@ virtual void clear() { _clear(); }
 			inline Ptr(Basic* _ptr) :ptr(_ptr) {}
 		public:
 			inline Ptr() :ptr(nullptr) {}
-			inline Ptr(const Ptr& obj) :ptr(obj.ptr) {
-				ptr->refNum++;
+			inline Ptr(const Ptr& obj){
+				if (this != &obj) {
+					ptr = obj.ptr;
+					ptr->refNum++;
+				}
 			}
 			inline Ptr(Ptr&& obj) noexcept :ptr(obj.ptr) {
 				obj.ptr = nullptr;
@@ -106,7 +116,7 @@ virtual void clear() { _clear(); }
 					delete ptr;
 				}
 			}
-			inline template<class T> T get() const { return dynamic_cast<T>(ptr); }
+			template<class T> inline T get() const { return dynamic_cast<T>(ptr); }
 			inline Basic* get() const { return ptr; }
 
 			inline void match(const wchar_t* sptr) { ptr->match(sptr); };
@@ -123,6 +133,10 @@ virtual void clear() { _clear(); }
 			inline size_t getSize()  const { return ptr->getSize(); }
 			inline wchar_t* getPtr() const { return ptr->getPtr(); }
 			inline wchar_t* getEnd() const { return ptr->getEnd(); }
+			inline bool getGreedy() const { return ptr->getGreedy(); }
+			inline void setGreedy(bool greedy) { ptr->setGreedy(greedy); }
+			inline bool getBanRematch() const { return ptr->getBanRematch(); }
+			inline void setBanRematch(bool greedy) { ptr->setBanRematch(greedy); }
 
 			inline bool operator==(const Ptr obj) const {
 				return obj.ptr == ptr;
@@ -171,61 +185,100 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 		POLYMORPHIC_PTR_MAKE(RepeatConstTimes_makePtr, RepeatConstTimes);
 		POLYMORPHIC_PTR_MAKE(RepeatRange_makePtr, RepeatRange);
 
-		class String : public Basic {
-		protected:
-			string wstr;
-			inline void _clear() { Basic::_clear(); }
-		public:
-			inline String() {}
-			inline String(string wstr) :wstr(wstr) {}
-			String(const String& obj) :Basic(obj), wstr(obj.wstr) {}
-
-			CLASS_SET(set, wstr, string);
-			CLASS_GET(get, wstr);
-			virtual ~String() {}
-			virtual void match(const wchar_t* sptr);
-			virtual void rematch();
-			VIRTUAL_TEMPLATE_DEF(String, (wstr));
+#define STRING_CLASS_DEF(CLASS_NAME) \
+	class CLASS_NAME : public Basic {\
+		protected:\
+			string wstr;\
+			inline void _clear() { Basic::_clear(); }\
+		public:\
+			inline CLASS_NAME(){}\
+			inline CLASS_NAME(string wstr, bool banRematch = false) :wstr(wstr), Basic(false, banRematch) {}\
+			CLASS_NAME(const CLASS_NAME& obj) :Basic(obj), wstr(obj.wstr) {}\
+\
+			CLASS_SET(set, wstr, string);\
+			CLASS_GET(get, wstr);\
+			virtual ~CLASS_NAME() {}\
+			virtual void match(const wchar_t* sptr);\
+			virtual void rematch();\
+			VIRTUAL_TEMPLATE_DEF(CLASS_NAME, (wstr));\
 		};
 
 		using resVector = vector<Ptr>;
-		
 
-		class StringOr : public Basic {
-		protected:
-			string wstr;
-			inline void _clear() { Basic::_clear(); }
-		public:
-			inline StringOr() {}
-			inline StringOr(string wstr) :wstr(wstr) {}
-			StringOr(const StringOr& obj) :Basic(obj), wstr(obj.wstr) {}
 
-			CLASS_SET(set, wstr, string);
-			CLASS_GET(get, wstr);
-			virtual ~StringOr() {}
-			virtual void match(const wchar_t* sptr);
-			virtual void rematch();
-			VIRTUAL_TEMPLATE_DEF(StringOr, (wstr));
+		STRING_CLASS_DEF(String);
+		STRING_CLASS_DEF(StringOr);
+		STRING_CLASS_DEF(StringExcept);
+
+#define STRING_REPEAT_CLASS_DEF(CLASS_NAME) \
+	class CLASS_NAME : public Basic {\
+		protected:\
+			string wstr;\
+			size_t min;\
+			size_t max;\
+			inline void _clear() { Basic::_clear(); }\
+			inline void _match();\
+		public:\
+			inline CLASS_NAME(bool greedy = false, bool banRematch = false):\
+				min(0), max(0), Basic(greedy, banRematch) {}\
+			inline CLASS_NAME(string wstr, size_t min, size_t max, bool greedy = false, bool banRematch = false) :\
+				wstr(wstr), min(min), max(max), Basic(greedy, banRematch) {}\
+			CLASS_NAME(const CLASS_NAME& obj) :Basic(obj), wstr(obj.wstr), min(obj.min), max(obj.max) {}\
+\
+			CLASS_SET(set, wstr, string);\
+			CLASS_GET(get, wstr);\
+			CLASS_SET(setMin, min, size_t);\
+			CLASS_GET(getMin, min);\
+			CLASS_SET(setMax, max, size_t);\
+			CLASS_GET(getMax, max);\
+			virtual ~CLASS_NAME() {}\
+			virtual void match(const wchar_t* sptr){\
+				ptr = const_cast<wchar_t*>(sptr);\
+				if(greedy){\
+					while((sptr[size] != '\0') & (size < max)){\
+						try {\
+							_match();\
+						}\
+						catch (match_error) {\
+							break;\
+						}\
+						size++;\
+					}\
+				}\
+				else{\
+					while((sptr[size] != '\0') & (size < min)){\
+						_match();\
+						size++;\
+					}\
+				}\
+			}\
+			virtual void rematch(){\
+				BAN_REMATCH_CHECK;\
+				if(greedy){\
+					if (size > min) {\
+						size--;\
+					}\
+					else {\
+						throw match_error();\
+					}\
+				}\
+				else {\
+					if(size < max){\
+						_match();\
+					}\
+					else{\
+						throw match_error();\
+					}\
+				}\
+			}\
+			VIRTUAL_TEMPLATE_DEF(CLASS_NAME, (wstr, min, max, greedy));\
 		};
 
-		class StringExcept : public Basic {
-		protected:
-			string wstr;
-			inline void _clear() { Basic::_clear(); }
-		public:
-			inline StringExcept() {}
-			inline StringExcept(string wstr) :wstr(wstr) {}
-			StringExcept(const StringExcept& obj) :Basic(obj), wstr(obj.wstr) {}
-			CLASS_SET(set, wstr, string);
-			CLASS_GET(get, wstr);
+		STRING_REPEAT_CLASS_DEF(StringOrRepeat);
+		STRING_REPEAT_CLASS_DEF(StringExceptRepeat);
 
-			virtual ~StringExcept() {}
-			virtual void match(const wchar_t* sptr);
-			virtual void rematch();
-			VIRTUAL_TEMPLATE_DEF(StringExcept, (wstr));
-
-		};
-
+		POLYMORPHIC_PTR_MAKE(StringOrRepeat_makePtr, StringOrRepeat);
+		POLYMORPHIC_PTR_MAKE(StringExceptRepeat_makePtr, StringExceptRepeat);
 
 		class Or : public Basic {//匹配任意一个值
 		protected:
@@ -235,10 +288,10 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 
 			inline void _clear();
 		public:
-			inline Or() {}
-			inline Or(resVector templated) :templated(templated) {}
+			inline Or(bool banRematch = false): Basic(false, banRematch) {}
+			inline Or(resVector templated, bool banRematch = false) :templated(templated), Basic(false, banRematch){}
 			Or(const Or& obj) : Basic(obj), templated(obj.templated),
-				cpdPtr(cpdPtr), cpdIt(templated.begin() + (obj.cpdIt - obj.templated.begin())) {}
+				cpdPtr(obj.cpdPtr), cpdIt(templated.begin() + (obj.cpdIt - obj.templated.begin())) {}
 
 			virtual void match(const wchar_t* sptr);
 			virtual void rematch();
@@ -257,7 +310,7 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 		protected:
 
 			resVector result;
-			inline Queue(bool greedy = false) : Basic(greedy) {}
+			inline Queue(bool greedy = false, bool banRematch = false) : Basic(greedy, banRematch) {}
 			Queue(const Queue& obj) :Basic(obj) {
 				result.reserve(obj.result.size());
 				for (auto i : obj.result) {
@@ -277,6 +330,7 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 
 			void push_back_templated_ptr_and_match(Ptr ptr);
 			void pop_back();
+			void matchRestart();
 
 			class Next {
 				wchar_t* start;
@@ -322,8 +376,8 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 		protected:
 			resVector templated;//模板（不占有指针）
 		public:
-			Vector() {}
-			Vector(resVector templated) :templated(templated) {}
+			Vector(bool banRematch = false): Queue(false, banRematch) {}
+			Vector(resVector templated, bool banRematch = false) :templated(templated), Queue(false, banRematch){}
 			Vector(const Vector& obj) : Queue(obj), templated(obj.templated) {}
 			CLASS_SET(setTemplated, templated, resVector);
 			CLASS_GET(getTemplated, templated);
@@ -346,9 +400,11 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 
 			inline void _clear() { Queue::_clear(); }
 		public:
-			inline Separate(Ptr templated, Ptr split, size_t min, size_t max, bool greedy = false) :
-				templated(templated), split(split), min(min), max(max), Queue(greedy) {}
-			inline Separate(bool greedy = false) : min(0), max(0), Queue(greedy) {}
+			inline Separate(Ptr templated, Ptr split, size_t min, size_t max, 
+				bool greedy = false, bool banRematch = false) :
+				templated(templated), split(split), min(min), max(max), Queue(greedy, banRematch) {}
+			inline Separate(bool greedy = false, bool banRematch = false) :
+				min(0), max(0), Queue(greedy, banRematch) {}
 
 			Separate(const Separate& obj) :
 				templated(obj.templated), split(obj.split), max(obj.max), min(obj.min), Queue(obj) {}
@@ -375,8 +431,9 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 		protected:
 
 			Ptr repeated;//不所有该指针
-			Repeat(bool greedy = false) : Queue(greedy) {}
-			Repeat(Ptr repeated, bool greedy = false) :repeated(repeated), Queue(greedy) {}
+			Repeat(bool greedy = false, bool banRematch = false) : Queue(greedy, banRematch) {}
+			Repeat(Ptr repeated, bool greedy = false, bool banRematch = false) :
+				repeated(repeated), Queue(greedy, banRematch) {}
 			Repeat(const Repeat& obj) : Queue(obj), repeated(obj.repeated) {}
 
 
@@ -406,8 +463,9 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 				Repeat::_clear();
 			}
 		public:
-			RepeatConstTimes() :times(0) {}
-			RepeatConstTimes(Ptr repeated, size_t times) :Repeat(repeated), times(times) {}
+			RepeatConstTimes(bool banRematch = false) :times(0), Repeat(false, banRematch) {}
+			RepeatConstTimes(Ptr repeated, size_t times, bool banRematch = false) :
+				Repeat(repeated, false, banRematch), times(times) {}
 			RepeatConstTimes(const RepeatConstTimes& obj) :Repeat(obj), times(obj.times) {}
 			virtual void match(const wchar_t* sptr);
 			virtual void rematch();
@@ -425,9 +483,10 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 				Repeat::_clear();
 			}
 		public:
-
-			RepeatRange(Ptr repeated, size_t min, size_t max, bool greedy = false) :
-				Repeat(repeated, greedy), min(min), max(max) {}
+			RepeatRange(bool greedy = false, bool banRematch = false) :
+				Repeat(greedy, banRematch), min(0), max(0) {}
+			RepeatRange(Ptr repeated, size_t min, size_t max, bool greedy = false, bool banRematch = false) :
+				Repeat(repeated, greedy, banRematch), min(min), max(max) {}
 			RepeatRange(const RepeatRange& obj) :Repeat(obj), min(obj.min), max(obj.max) {}
 			virtual void match(const wchar_t* sptr);
 			virtual void rematch();
@@ -439,15 +498,33 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 			VIRTUAL_TEMPLATE_DEF(RepeatRange, (repeated, min, max, greedy));
 		};
 
+
+
 		//-------------------------------------------------------------------------
 
+		void StringOrRepeat::_match() {
+			if (wstr.find(ptr[size]) == string::npos) {
+				throw match_error();
+			}
+		}
+
+		void StringExceptRepeat::_match() {
+			if (wstr.find(ptr[size]) != string::npos) {
+				throw match_error();
+			}
+		}
+
 		void Separate::rematch() {
+			BAN_REMATCH_CHECK;
 			try {
 				Next next(result, result.rbegin());
 				next.main();
 				size = next.get(result) - ptr;
 			}
 			catch (match_error) {
+				matchRestart();//绝对不要删去
+				//否则遍历不完全
+
 				if (greedy) {
 					pop_back();
 					if (size != 0) {
@@ -456,7 +533,7 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 				}
 				else {
 					try {
-						if (size != 0) {
+						if (result.size() != 0) {
 							push_back_templated_ptr_and_match(split.matchPcopy());
 						}
 						push_back_templated_ptr_and_match(templated.matchPcopy());
@@ -554,17 +631,23 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 		}
 
 		void Or::rematch() {
-			cpdIt++;
-			for (; cpdIt != templated.end(); cpdIt++) {
-				try {
-					cpdPtr = (*cpdIt).matchPcopy();
-					cpdPtr.match(ptr);
-					size = cpdPtr.getSize();
-					return;
-				}
-				catch (match_error) {}
+			BAN_REMATCH_CHECK;
+			try {
+				cpdPtr.rematch();
 			}
-			throw match_error();
+			catch (match_error) {
+				cpdIt++;
+				for (; cpdIt != templated.end(); cpdIt++) {
+					try {
+						cpdPtr = (*cpdIt).matchPcopy();
+						cpdPtr.match(ptr);
+						size = cpdPtr.getSize();
+						return;
+					}
+					catch (match_error) {}
+				}
+				throw match_error();
+			}
 		}
 
 		Or::~Or() {
@@ -605,9 +688,25 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 			workSpace.swap(result);
 		}
 
+		void Queue::matchRestart() {
+			wchar_t* start = ptr;
+			for (auto i : result) {
+				i.clear();
+				i.match(start);
+				start = i.getEnd();
+			}
+			size = start - ptr;
+		}
+
 		void Queue::pop_back() {
 			result.pop_back();
-			size = result.back().getEnd() - ptr;
+			if (result.empty()) {
+				ptr = nullptr;
+				size = 0;
+			}
+			else {
+				size = result.back().getEnd() - ptr;
+			}
 		}
 
 		void Vector::match(const wchar_t* sptr) {
@@ -620,6 +719,7 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 		}
 
 		void Vector::rematch() {
+			BAN_REMATCH_CHECK;
 			Next next(result, result.rbegin());
 			next.main();
 			size = next.get(result) - ptr;
@@ -736,6 +836,7 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 
 
 		void RepeatRange::rematch() {
+			BAN_REMATCH_CHECK;
 			try {
 				Next next(result, result.rbegin());
 				next.main();
@@ -747,6 +848,9 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 				}
 				else {
 					try {
+						matchRestart();//不要删去
+						//否则遍历不完全
+
 						push_back_repeated_ptr();
 
 					}
@@ -772,6 +876,7 @@ inline Ptr FUNCTION_NAME (Args_ ... args_){\
 		}
 
 		void RepeatConstTimes::rematch() {
+			BAN_REMATCH_CHECK;
 			Next next(result, result.rbegin());
 			next.main();
 			next.get(result);
